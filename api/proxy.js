@@ -50,35 +50,7 @@ function collectFormats(data) {
   return out;
 }
 
-// When the page hits /api/proxy?save=1&src=<googlevideo url>&name=<file>,
-// stream that file back with an attachment header so the browser SAVES it
-// instead of playing it in a tab.
-async function handleSave(req, res) {
-  const src = req.query.src;
-  const name = (req.query.name || "video.mp4").replace(/[^\w.\- ]+/g, "_");
-  if (!src || !/^https:\/\/[^/]*googlevideo\.com\//.test(src)) {
-    return res.status(400).json({ ok: false, error: { message: "Bad or missing src." } });
-  }
-  let upstream;
-  try {
-    upstream = await fetch(src);
-  } catch (e) {
-    return res.status(502).json({ ok: false, error: { message: "Fetch failed: " + e.message } });
-  }
-  if (!upstream.ok) {
-    return res.status(502).json({ ok: false, error: { message: "Source returned " + upstream.status + " (link may have expired)." } });
-  }
-  res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/octet-stream");
-  const len = upstream.headers.get("content-length");
-  if (len) res.setHeader("Content-Length", len);
-  res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
-  const buf = Buffer.from(await upstream.arrayBuffer());
-  return res.status(200).send(buf);
-}
-
 export default async function handler(req, res) {
-  if (req.query.save) return handleSave(req, res);
-
   const key = process.env.RAPIDAPI_KEY;
   const host = process.env.RAPIDAPI_HOST || "ytstream-download-youtube-videos.p.rapidapi.com";
   if (!key) {
