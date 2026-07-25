@@ -59,13 +59,17 @@ $("go").addEventListener("click", async () => {
     $("thumb").src = d.thumbnail || "";
     $("title").textContent = d.title || "video";
 
+    const safe = (d.title || "video").replace(/[^\w.\- ]+/g, "_").slice(0, 60);
+    const saveHref = (u, ext) =>
+      "/api/proxy?save=1&src=" + encodeURIComponent(u) + "&name=" + encodeURIComponent(safe + ext);
+
     const links = [];
-    if(d.best) links.push('<a class="dl" href="' + d.best.url + '" target="_blank" rel="noopener">Download video' + (d.best.quality ? " (" + d.best.quality + ")" : "") + '</a>');
-    if(d.audio) links.push('<a class="dl alt" href="' + d.audio.url + '" target="_blank" rel="noopener">Audio only</a>');
+    if(d.best) links.push('<a class="dl" href="' + saveHref(d.best.url, ".mp4") + '">Download video' + (d.best.quality ? " (" + d.best.quality + ")" : "") + '</a>');
+    if(d.audio) links.push('<a class="dl alt" href="' + saveHref(d.audio.url, ".m4a") + '">Audio only</a>');
     $("links").innerHTML = links.join("") || "No links found.";
 
     $("out").classList.add("show");
-    say("Ready. Click a button to download (opens the direct file).");
+    say("Ready. Click to download — it saves straight to your device.");
   }catch(e){ say(e.message, true); }
   finally{ $("go").disabled = false; }
 });
