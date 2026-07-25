@@ -61,43 +61,21 @@ $("go").addEventListener("click", async () => {
 
     const safe = (d.title || "video").replace(/[^\w.\- ]+/g, "_").slice(0, 60);
 
+    // Google's videoplayback URLs accept &title= and force a download when the
+    // browser NAVIGATES to them (not fetch). This sidesteps both the IP-lock
+    // (the user's own browser fetches it) and CORS (navigation isn't CORS-gated).
+    const forceDl = (u, base) => {
+      const j = u.includes("?") ? "&" : "?";
+      return u + j + "title=" + encodeURIComponent(base);
+    };
+
     const links = [];
-    if(d.best) links.push('<a class="dl" data-url="' + encodeURIComponent(d.best.url) + '" data-name="' + safe + '.mp4" href="#">Download video' + (d.best.quality ? " (" + d.best.quality + ")" : "") + '</a>');
-    if(d.audio) links.push('<a class="dl alt" data-url="' + encodeURIComponent(d.audio.url) + '" data-name="' + safe + '.m4a" href="#">Audio only</a>');
+    if(d.best) links.push('<a class="dl" href="' + forceDl(d.best.url, safe) + '" download="' + safe + '.mp4">Download video' + (d.best.quality ? " (" + d.best.quality + ")" : "") + '</a>');
+    if(d.audio) links.push('<a class="dl alt" href="' + forceDl(d.audio.url, safe) + '" download="' + safe + '.m4a">Audio only</a>');
     $("links").innerHTML = links.join("") || "No links found.";
 
-    // Fetch the file in the browser (from the user's own IP, so Google's
-    // IP-locked link is happy), then save it via a blob. This is what forces a
-    // download instead of playing in a tab, without a server in the middle.
-    document.querySelectorAll(".dl").forEach(a => {
-      a.addEventListener("click", async ev => {
-        ev.preventDefault();
-        const url = decodeURIComponent(a.dataset.url);
-        const name = a.dataset.name;
-        const original = a.textContent;
-        a.textContent = "Downloading…";
-        a.style.pointerEvents = "none";
-        try{
-          const r = await fetch(url);
-          if(!r.ok) throw new Error("HTTP " + r.status);
-          const blob = await r.blob();
-          const href = URL.createObjectURL(blob);
-          const tmp = document.createElement("a");
-          tmp.href = href; tmp.download = name;
-          document.body.appendChild(tmp); tmp.click(); tmp.remove();
-          URL.revokeObjectURL(href);
-          a.textContent = "Saved ✓";
-        }catch(e){
-          a.textContent = original;
-          say("Download failed: " + e.message + " (link may have expired — fetch links again).", true);
-        }finally{
-          a.style.pointerEvents = "";
-        }
-      });
-    });
-
     $("out").classList.add("show");
-    say("Ready. Click to download — it saves straight to your device.");
+    say("Ready. Click to download. If a video opens in a new tab instead, press Ctrl+S (desktop) or long-press → Save (mobile).");
   }catch(e){ say(e.message, true); }
   finally{ $("go").disabled = false; }
 });
