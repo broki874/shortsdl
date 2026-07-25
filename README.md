@@ -1,7 +1,7 @@
-# Shorts downloader — RapidAPI (YTStream), forced-download version
+# Shorts downloader — RapidAPI (YTStream), client-side save
 
-Same as before, but clicking a button now SAVES the file instead of opening it
-in a browser tab.
+Fast direct download from Google's CDN, and clicking a button SAVES the file
+instead of playing it in a tab.
 
 ## Vercel environment variables
 | Name | Value |
@@ -11,20 +11,20 @@ in a browser tab.
 
 Set both, tick all environments, then Deployments -> Redeploy.
 
-## How the download works now
-- Getting links is unchanged: browser -> /api/proxy?url=... -> YTStream.
-- The download buttons point at /api/proxy?save=1&src=<googlevideo url>, which
-  fetches the file and re-sends it with a Content-Disposition: attachment header.
-  That header is what makes the browser save rather than play.
+## Why it works this way (important)
+Google's download links are locked to the IP that will fetch them. That IP is
+the END USER'S browser, not your server. So the file MUST be fetched client-side:
+- The proxy is only used to GET the links from YTStream (small JSON).
+- The browser then fetches the actual video from googlevideo.com itself and
+  saves it via a blob. Same IP the link was issued for -> no 403.
+Trying to proxy the file through the server returns 403, because the server's
+IP doesn't match the link. That's a property of the API, not a bug.
 
-## Trade-off to know
-- The file now passes THROUGH your Vercel function, so it's a little slower than
-  the raw direct link and counts against Vercel's function time/size limits
-  (fine for short Shorts; long videos may hit the ceiling).
-- If you'd rather have raw speed and don't mind the "opens in a tab, right-click
-  to save" behaviour, revert the buttons to use d.best.url directly.
+## Limits
+- The file briefly sits in browser memory during download. Fine for Shorts;
+  very large files could strain low-memory devices.
+- RapidAPI free tiers have low request caps — watch your quota.
 
 ## Security
-- The save endpoint ONLY proxies googlevideo.com URLs, so it can't be abused to
-  fetch arbitrary sites through your function.
-- The RapidAPI key stays server-side. Rotate it if exposed.
+- RapidAPI key stays server-side in the function; browser never sees it.
+- Rotate the key in the RapidAPI dashboard if it has ever been exposed.
